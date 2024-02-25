@@ -1,6 +1,34 @@
 ---
 title: "LMM"
+
+format: html
+editor: visual
 ---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(error = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+## Load Library:
+
+```{r}
+library(tidyverse) # data wrangling and visualization
+library(lme4)      # "golden standard" for mixed-effects modelling in R (no p-values)
+library(lmerTest)  # p-values for MEMs based on the Satterthwaite approximation
+library(psycho)    # mainly for an "analyze()" function
+library(broom)     # for tidy results
+library(knitr)     # beautifying tables
+library(sjPlot)    # for visualising MEMs
+library(effects)   # for visualising MEMs
+library(report)    # for describing models
+library(emmeans)   # for post-hoc analysis
+library(Matrix)    # install in console should be Version 1.6-5
+
+```
 
 ## Quarto
 
