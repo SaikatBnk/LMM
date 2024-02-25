@@ -216,3 +216,39 @@ sqrt(diag(vcov(pp_mod)))
 # OR, equivalently using pipes:
 # vcov(pp_mod) %>% diag() %>% sqrt()
 ```
+
+You can get confidence intervals for the estimates using [`confint()`](https://rdrr.io/r/stats/confint.html) (this technique uses the *parametric bootstrap*). 
+
+```{r}
+confint(pp_mod)
+```
+
+### **Random effects**
+
+Some additional analysis from:
+
+<https://yury-zablotski.netlify.app/post/mixed-effects-models-1/>
+
+```{r}
+boxplot(Reaction ~ Subject,
+col=c("white","lightgray"),data = sleepstudy)
+```
+
+Is the random effect important? Hell, yeah! And there are two ways to prove that:
+
+1.  The amount of variance explained by the *subject* is huge = 3982. How do we know that this number is huge? We can divide the variance for the *subject* by the total variance (variance of the random effect + residuals).
+
+    ```{r}
+    Variance_Explained = (958.35/(958.35 + 45.78 + 651.6))*100
+
+    Variance_Explained 
+    ```
+
+```{r}
+coef(pp_mod)
+```
+
+```{r}
+library(lattice) 
+dotplot(ranef(pp_mod, condVar=T))
+```
