@@ -197,3 +197,22 @@ pp_mod <- lmer(Reaction ~ days_deprived + (days_deprived | Subject), sleep2)
 
 summary(pp_mod)
 ```
+
+## **Interpreting `lmer()` output and extracting estimates**
+
+Fixed effect:
+
+```{r}
+fixef(pp_mod)
+```
+
+The standard errors give us estimates of the variability for these parameters due to sampling error.
+
+You could use these to calculate the t�-values or derive confidence intervals. Extract them using `vcov(pp_mod)` which gives a variance-covariance matrix (*not* the one associated with the random effects), pull out the diagonal using [`diag()`](https://rdrr.io/r/base/diag.html) and then take the square root using [`sqrt()`](https://rdrr.io/r/base/MathFun.html).
+
+```{r}
+sqrt(diag(vcov(pp_mod)))
+
+# OR, equivalently using pipes:
+# vcov(pp_mod) %>% diag() %>% sqrt()
+```
