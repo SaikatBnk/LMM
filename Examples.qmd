@@ -1,0 +1,242 @@
+---
+title: "Case Studies"
+format: html
+editor: visual
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(error = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+## Reference:
+
+This is from: <https://psyteachr.github.io/stat-models-v1/introduction.html>
+
+## Load all needed packages
+
+```{r}
+# install.packages("lmerTest")
+# install.packages("psycho")
+# install.packages("broom")
+# install.packages("knitr")
+# install.packages("sjPlot")
+# install.packages("report")
+# install.packages("emmeans")
+# install.packages("devtools")
+# devtools::install_github("duckmayr/oldr")
+# oldr::install.compatible.packages("effects")
+
+library(tidyverse) # data wrangling and visualization
+library(lme4)      # "golden standard" for mixed-effects modelling in R (no p-values)
+library(lmerTest)  # p-values for MEMs based on the Satterthwaite approximation
+library(psycho)    # mainly for an "analyze()" function
+library(broom)     # for tidy results
+library(knitr)     # beautifying tables
+library(sjPlot)    # for visualising MEMs
+library(effects)   # for visualising MEMs
+library(report)    # for describing models
+library(emmeans)   # for post-hoc analysis
+```
+
+### **1.2.1 Linear models**
+
+A simple example of a linear model is
+
+Yi=β0+β1Xi+ei
+
+```{r}
+library("tidyverse") # if needed
+
+set.seed(62)
+
+dat <- tibble(X = runif(100, -3, 3),
+              Y = 3 + 2 * X + rnorm(100))
+
+ggplot(dat, aes(X, Y)) +
+  geom_point() +
+  geom_abline(intercept = 3, slope = 2, color = "blue")
+```
+
+The [generalizability](https://psyteachr.github.io/glossary/g#generalizability "A term referring to the degree to which findings can be readily applied to situations beyond the particular context in which the data were collected.") of an inference or interpretation of a study result refers to the degree to which it can be readily applied to situations beyond the particular study context (subjects, stimuli, task, etc.). At best, our findings would apply to all members of the human species across a wide variety of stimuli and tasks; at worst, they would apply only to those specific people encountering the specific stimuli we used, observed in the specific context of our study.
+
+The generalizability of a finding depends on several factors: how the study was designed, what materials were used, how subjects were recruited, the nature of the task given to the subjects, **and the way the data were analyzed**.
+
+When analyzing a dataset, if you want to make generalizable claims, you must make decisions about what you would count as a replication of your study---about which aspects should remain fixed across replications, and which you would allow to vary.
+
+Unfortunately, you will sometimes find that data have been analyzed in a way that does not support generalization in the broadest sense, often because analyses underestimate the influence of ideosyncratic features of stimulus materials or experimental task on the observed result
+
+## Problem:
+
+We are forced to collect **data from the same person (animal, process) repeatedly**. And although more data often leads to better conclusions, unfortunately, additional data may also add **more variation** or uncertainty.
+
+Such additional variation might either (1) increase the error (unexplained variation) by "diluting" the real (fixed) effect of predictors, making them insignificant, or (2) reduce the error by over-explaining predictors and making predictors significant, while in (a fixed) reality they are not.
+
+The height or gender of any person at a given time is **fixed**, because the possibilities are not unlimited, not random.
+
+One of the 6 assumptions of the usual linear regression is **the independence of observations**. It's the strictest one. If we take repeated measurements of e.g. blood pressure from the same group of people on different days, we **violate this assumption heavily**, because we would have two different sources of variation (effects) in our data. Namely (1) **fixed** (for independent observations), which measures the variance of blood pressure between different people (e.g. choleric and melancholic), (2) and **random** (for dependent ones) which will contain the variation of each particular person on different days (think about a day after a heavy party and no sleep as opposed to a day after a chilled-out movie evening). Models, which are able to handle both kinds of effects (fixed and random) at the same time are - **mixed effects models (MEM)**.
+
+The problem with \<5 levels is, that **estimating variance of few data points** (say 3) is very imprecise, so that you'll get a result, but not the one you can trust!
+
+```{r}
+politeness = read_csv("politeness_data.csv")
+
+str(politeness)
+```
+
+Visualize the data:
+
+```{r}
+boxplot(frequency ~ attitude,
+col=c("white","lightgray"),politeness)
+```
+
+Our response variable - *voice-frequency* on the y-axis does not seem to differ in terms of *attitude* - polite vs. informal. And a simple linear model below confirms that there is no significant differences (p = 0.2) in between different *attitudes*:
+
+```{r}
+politeness.model = lm(frequency ~ attitude , data=politeness)
+#summary(politeness.model)
+summary(politeness.model) %>% tidy() %>% kable()
+```
+
+However, the boxplots above include the subjective variation of 6 different *subjects* (people) within the *attitude*-predictor, and if **we extract this random effect of the *subjects* from the fixed effect** of *attitude* by including this exact random effect of the *subjects* into the model in this form `(1|subject)`, the difference in *attitudes* suddenly becomes significant (p = 0.003):
+
+```{r}
+boxplot(frequency ~ subject,
+col=c("white","lightgray"),politeness)
+
+```
+
+```{r}
+politeness.model = lmer(frequency ~ attitude + (1|subject), data=politeness)
+summary(politeness.model)
+
+
+```
+
+**Interpretation:** Summary of the MEM ﬁrst includes information about the *random eﬀects*. Here, the column *Groups* shows the random effect variables. The column *Name* indicates that this random eﬀect only aﬀects the intercept. The line *subject* refers to the variation due to subjects.The line *Residuals* is the general variation that cannot be explained by the model - the real error term. Important is that the standard error of the slope became much smaller (6.4) compared to the ordinary regression slope (14.3), thus, our model became more precise!
+
+### **Why and how do we compare models?**
+
+```{r}
+m1 <- lm(frequency ~ attitude, data=politeness)
+m2 <- lmer(frequency ~ attitude + (1|subject), data=politeness, REML = F)
+anova(m2, m1)
+```
+
+## Random eﬀects:
+
+```{r}
+coef(m2)
+```
+
+**Effect Plot:**
+
+```{r}
+library(lattice) 
+dotplot(ranef(m2, condVar=T))
+
+```
+
+we have seen, that the subjective variation due to repeated measurements is real and soo significant in our model, that it screwed up the real effect of the attitude. Similarly, there might be other kinds of variation which would continue to overwrite a real (fixed) effects of the attitude, if not removed from the fixed effects via random effects. For instance, if we visualize different scenarios, we see 6 repeated measurements for each scenario per attitude and they also vary a lot (big boxplots)
+
+```{r}
+ggplot(politeness, aes(factor(scenario), frequency, fill = attitude))+
+  geom_boxplot(aes(color = attitude))+
+  geom_point()+
+  theme_bw()
+```
+
+Thus, we first can check whether this random effect (1\|scenario) is important for the model:
+
+```{r}
+m1 <- lmer(frequency ~ attitude + (1|subject), data=politeness, REML = F)
+m2 <- lmer(frequency ~ attitude + (1|subject) + (1|scenario), data=politeness, REML = F)
+anova(m2, m1)
+```
+
+It looks like it is! And then we can have a look at the new 7 intercepts (for 7 scenarios):
+
+```{r}
+coef(m2)
+```
+
+```{r}
+dotplot(ranef(m2, condVar=T))
+```
+
+If we take out this variance from the model (via random effects), we'll again make the fixed effects ("*attitude*" in our case) more realistic! This is why the p-value for the fixed effect is:
+
+-   not-significant (p = 0.2) if variation contained in both, *subject* and *scenario*, is included into the *attitude*
+
+-   significant (p = 0.003) when variation of *subjects* is excluded from *attitude*
+
+-   and even more significant (p = 0.0007) when variation of both *subjects* and *scenario* is excluded from the *attitude*:
+
+```{r}
+summary(m2)
+```
+
+The variation between scenarios is 15 times smaller (3367.7 / 216.8) then the variation between subjects, which is another inference we can draw from our model, but scenarios are still significant, and we better account for them in our model!
+
+```{r}
+plot(allEffects(m2))
+```
+
+```{r}
+report(m2) 
+```
+
+### **Multiple MEM: adding another predictor**
+
+The visualization below reveals that there are clear differences between man and woman (gender is the only remaining variable in our dataset). Thus, we might add gender to try to explain more of the variance in our data:
+
+```{r}
+boxplot(frequency ~ attitude*gender,
+col=c("white","lightgray"),politeness)
+```
+
+```{r}
+m2 <- lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), 
+           data=politeness, REML = F)
+plot(allEffects(m2))
+```
+
+```{r}
+report(m2)
+```
+
+Whether the model with *gender* in it is better then without:
+
+```{r}
+m1 <- lmer(frequency ~ attitude + (1|subject) + (1|scenario), data=politeness, REML = F)
+m2 <- lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), data=politeness, REML = F)
+anova(m2, m1)
+```
+
+It actually is, which means that the fixed effect of *gender* is significant. The model summary below corroborates with this conclusion:
+
+```{r}
+
+tab_model(m2)
+#tab_model(m2, p.style = "both")
+```
+
+### **Explanatory vs. predictive power of the model**
+
+But how can a model with a lower explanatory power be significantly better? Well, the *explanatory power* shows the *quality of fit*, while AIC, being an indicator of the *predictive power*, shows *the quality of the model*. Thus, the model can be *overfit* to a particular dataset and have very high explanatory power, but be miserable at prediction (extrapolation or interpolation) if provided with new data.
+
+*Different intercepts for different subjects and different intercepts for different scenarios solved the non-independence problem in out data. This also allowed us to exclude the inside-subject and inside-scenarios variation from the fixed effects, which was caused by multiple responses per subject and per scenario.*
+
+Reference: <https://yury-zablotski.netlify.app/post/mixed-effects-models-2/>
+
+```{r}
+nested <- tibble(
+  patient = c(rep(1,4), rep(2,4), rep(3,4), rep(4,4)),
+  doctor  = c(rep("Bob", 8), rep("Mik", 8))
+)
+table(nested$patient, nested$doctor)
+```
